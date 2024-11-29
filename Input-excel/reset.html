@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Save to Excel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+</head>
+<style>
+    *{
+        margin: 0;
+        padding: 0;
+    }
+    body{
+        background-image: url(rail2.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        backdrop-filter: blur(3px);
+        height: 100%;
+    }
+    .input1{
+        margin-left: 550px;
+    }
+    p{
+        font-size: 2em;
+        color:white;
+    }
+    button {
+        border-radius: 7px;
+        border: 1px solid grey;
+        padding: 8.2px;
+        box-shadow: 2px 3px 4px grey;
+    }
+    button:hover {
+        cursor: pointer;
+        background-color: grey;
+    }
+      
+    table {
+        width: 70%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    table, th, td {
+        border: 1px solid #ddd;
+    }
+
+    th, td {
+        padding: 10px;
+        text-align: left;
+        background-color: #fafafa;
+    }
+    tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    #searchResults {
+        margin-top: 20px;
+        font-family: Arial, sans-serif;
+    }
+
+    #searchQuery {
+        padding: 8px;
+        width: 200px;
+        margin-top: 10px;
+        margin-left: 500px;
+        border-radius: 5px;
+        border: 1px solid grey;
+        box-shadow: 2px 3px 4px grey;
+    }
+    #saveButton {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px 20px;
+        background-color: green;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: none;
+    }
+    #saveButton:hover {
+        background-color: greenyellow;
+    }
+
+    .logo {
+        display: flex;
+        background-color: white;
+    }
+
+    .logo h1 {
+        font-size: 3em;
+        font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        color: rgb(63, 62, 62);
+        margin-left: 400px;
+    }
+</style>
+<body>
+    <div class="logo">
+        <img src="logor.png">
+        <!-- <h1>edrc</h1> -->
+        <img src="signal.gif" height="100px" width="150px"/>
+        <marquee scrollamount="20"><img src="FINAL.png" ></img></marquee>
+       
+    </div>
+
+    <p class="input1">Choose File :<button onclick="loadExcel('fileInput')" >Input </button></p>
+    <input type="file" id="fileInput" style="display:none" onchange="readExcel(event, 'excelData1')">
+
+    <div>
+        <input type="text" id="searchQuery" placeholder="Search..." onclick="hideSearchField()">
+        <button onclick="searchData()">Search</button>
+        <button onclick="reset()">Reset</button>
+    </div>
+
+    <div id="searchResults"></div>
+    <button id="saveButton" style="display:none;" onclick="saveResults()">Save</button>
+
+    <div id="excelData1"></div> 
+
+    <script>
+        var excelData = [];
+
+        function loadExcel(inputId) {
+            document.getElementById(inputId).click();
+        }
+
+        function readExcel(event, dataDivId) {
+            var file = event.target.files[0];
+            var reader = new FileReader();
+
+            reader.onload = function(e) {
+                var data = e.target.result;
+                var workbook = XLSX.read(data, { type: 'binary' });
+                var sheetName = workbook.SheetNames[0];
+                var sheet = workbook.Sheets[sheetName];
+                var html = XLSX.utils.sheet_to_html(sheet);
+                
+                
+                document.getElementById(dataDivId).innerHTML = html;
+
+                excelData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        function searchData() {
+            var query = document.getElementById('searchQuery').value.toLowerCase();
+            var results = [];
+
+            for (var i = 0; i < excelData.length; i++) {
+                for (var j = 0; j < excelData[i].length; j++) {
+                    if (excelData[i][j] && excelData[i][j].toString().toLowerCase().includes(query)) {
+                        results.push(excelData[i]);
+                        break; 
+                    }
+                }
+            }
+
+            displaySearchResults(results);
+        }
+
+        function displaySearchResults(results) {
+            var resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '';
+            document.getElementById('saveButton').style.display = 'none';  
+
+            if (results.length > 0) {
+                var table = '<table border="1"><tr>';
+
+                for (var col = 0; col < results[0].length; col++) {
+                    table += '<th>' + results[0][col] + '</th>';
+                }
+                table += '</tr>';
+
+                for (var i = 1; i < results.length; i++) {
+                    table += '<tr>';
+                    for (var j = 0; j < results[i].length; j++) {
+                        table += '<td>' + results[i][j] + '</td>';
+                    }
+                    table += '</tr>';
+                }
+                table += '</table>';
+                resultsDiv.innerHTML = table;
+
+                document.getElementById('saveButton').style.display = 'inline-block';
+            } else {
+                resultsDiv.innerHTML = 'No results found';
+            }
+        }
+
+        function saveResults() {
+            var resultsDiv = document.getElementById('searchResults');
+            var table = resultsDiv.querySelector('table');
+            if (table) {
+                var rows = table.rows;
+                var data = [];
+
+                for (var i = 0; i < rows.length; i++) {
+                    var row = [];
+                    var cells = rows[i].cells;
+                    for (var j = 0; j < cells.length; j++) {
+                        row.push(cells[j].innerText);
+                    }
+                    data.push(row);
+                }
+
+                var wb = XLSX.utils.book_new();
+                var ws = XLSX.utils.aoa_to_sheet(data);
+
+                XLSX.utils.book_append_sheet(wb, ws, 'Search Results');
+
+                XLSX.writeFile(wb, 'search_results.xlsx');
+            }
+        }
+
+        function reset() {
+            document.getElementById('searchQuery').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('excelData1').innerHTML = '';
+            document.getElementById('saveButton').style.display = 'none';  
+            excelData = [];
+        }
+    </script>
+</body>
+</html>
